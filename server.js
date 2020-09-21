@@ -72,6 +72,22 @@ MongoClient.connect(db, (err, db) => {
     app.use(nosniff());
     */
 
+        /*
+    // Fix for A8 - CSRF
+    // Enable Express csrf protection
+    app.use(csrf());
+    // Make csrf token available in templates
+    app.use((req, res, next) => {
+        res.locals.csrftoken = req.csrfToken();
+        next();
+    });
+    */
+   app.use(csrf());
+   app.use((req, res, next) => {
+       res.locals.csrftoken = req.csrfToken();
+       next();
+   });
+
    app.disable("x-powered-by");
    app.use(helmet.frameguard());
    app.use(helmet.noCache());
@@ -121,17 +137,6 @@ MongoClient.connect(db, (err, db) => {
                secure: true
            }
     }));
-
-    /*
-    // Fix for A8 - CSRF
-    // Enable Express csrf protection
-    app.use(csrf());
-    // Make csrf token available in templates
-    app.use((req, res, next) => {
-        res.locals.csrftoken = req.csrfToken();
-        next();
-    });
-    */
 
     // Register templating engine
     app.engine(".html", consolidate.swig);
