@@ -1,4 +1,7 @@
 /* The ProfileDAO must be constructed with a connected database object */
+const crypto = require('crypto');
+const config = require('../../config/config');
+
 function ProfileDAO(db) {
 
     "use strict";
@@ -38,6 +41,21 @@ function ProfileDAO(db) {
         return `${decipher.update(toDecrypt, "hex", "utf8")} ${decipher.final("utf8")}`;
     };
     */
+   const createIV = () => {
+    const salt = crypto.randomBytes(16);
+    return crypto.pbkdf2Sync(config.cryptoKey, salt, 100000, 512, "sha512");
+};
+
+    const encrypt = (toEncrypt) => {
+        config.iv = createIV();
+        const cipher = crypto.createCipheriv(config.cryptoAlgo, config.cryptoKey, config.iv);
+        return `{cipher.update(toEncrypt, "utf-8", "hex")} ${cipher.final("hex")}`;
+};
+
+    const decrypt = (toDecrypt) => {
+        const decipher = crypto.createDecipheriv(config.cryptoAlgo, config.cryptoKey, config.iv);
+        return `${decipher.update(toDecrypt, "hex", "utf8")} ${decipher.final("utf8")}`;
+    }
 
     this.updateUser = (userId, firstName, lastName, ssn, dob, address, bankAcc, bankRouting, callback) => {
 
@@ -74,6 +92,12 @@ function ProfileDAO(db) {
             user.dob = encrypt(dob);
         }
         */
+       if (ssn) {
+           user.ssn = encrypt(ssn);
+       }
+       if (dob) {
+           user.dob = encrypt(dob);
+       }
 
         users.update({
                 _id: parseInt(userId)
@@ -103,6 +127,9 @@ function ProfileDAO(db) {
                 user.ssn = user.ssn ? decrypt(user.ssn) : "";
                 user.dob = user.dob ? decrypt(user.dob) : "";
                 */
+
+                user.ssn = user.ssn ? decrypt(user.ssn) : "";
+                user.dob = user.dob ? decrypt(user.dob) : "";
 
                 callback(null, user);
             }

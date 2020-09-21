@@ -20,8 +20,8 @@ function ProfileHandler (db) {
             // while the developer intentions were correct in encoding the user supplied input so it
             // doesn't end up as an XSS attack, the context is incorrect as it is encoding the firstname for HTML
             // while this same variable is also used in the context of a URL link element
-            doc.website = ESAPI.encoder().encodeForHTML(doc.website)
-            // fix it by replacing the above with another template variable that is used for 
+            doc.website = ESAPI.encoder().encodeForURL(doc.website)
+            // fix it by replacing the above with another template variable that is used for
             // the context of a URL in a link header
             // doc.website = ESAPI.encoder().encodeForURL(doc.website)
 

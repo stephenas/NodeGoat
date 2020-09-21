@@ -4,17 +4,26 @@ const express = require("express");
 const favicon = require("serve-favicon");
 const bodyParser = require("body-parser");
 const session = require("express-session");
-// const csrf = require('csurf');
+const csrf = require('csurf');
 const consolidate = require("consolidate"); // Templating library adapter for Express
 const swig = require("swig");
-// const helmet = require("helmet");
+const helmet = require("helmet");
 const MongoClient = require("mongodb").MongoClient; // Driver for connecting to MongoDB
 const http = require("http");
 const marked = require("marked");
-//const nosniff = require('dont-sniff-mimetype');
+const nosniff = require('dont-sniff-mimetype');
 const app = express(); // Web framework to handle routing requests
 const routes = require("./app/routes");
+const fs = require('fs');
+const https = require('https');
+const path = require('path');
 const { port, db, cookieSecret } = require("./config/config"); // Application config properties
+
+const httpsOptions = {
+    key: fs.readFileSync(path.resolve(__dirname, "./artifacts/cert/server.key")),
+    cert: fs.readFileSync(path.resolve(__dirname, "./artifacts/cert/server.crt"))
+};
+
 /*
 // Fix for A6-Sensitive Data Exposure
 // Load keys for establishing secure HTTPS connection
@@ -39,7 +48,6 @@ MongoClient.connect(db, (err, db) => {
     // Fix for A5 - Security MisConfig
     // TODO: Review the rest of helmet options, like "xssFilter"
     // Remove default x-powered-by response header
-    app.disable("x-powered-by");
 
     // Prevent opening page in frame or iframe to protect from clickjacking
     app.use(helmet.frameguard()); //xframe deprecated
@@ -64,6 +72,14 @@ MongoClient.connect(db, (err, db) => {
     app.use(nosniff());
     */
 
+   app.disable("x-powered-by");
+   app.use(helmet.frameguard());
+   app.use(helmet.noCache());
+   app.use(helmet.contentSecurityPolicy());
+   app.use(helmet.hsts());
+   app.use(helmet.xssFilter({ setOnOldIE: true }));
+   app.use(nosniff());
+
     // Adding/ remove HTTP Headers for security
     app.use(favicon(__dirname + "/app/assets/favicon.ico"));
 
@@ -73,6 +89,7 @@ MongoClient.connect(db, (err, db) => {
         // Mandatory in Express v4
         extended: false
     }));
+    // app.use(cookieParser());
 
     // Enable session management using express middleware
     app.use(session({
@@ -80,9 +97,10 @@ MongoClient.connect(db, (err, db) => {
         //    return genuuid() // use UUIDs for session IDs
         //},
         secret: cookieSecret,
+        key: "sessionId",
         // Both mandatory in Express v4
         saveUninitialized: true,
-        resave: true
+        resave: true,
         /*
         // Fix for A5 - Security MisConfig
         // Use generic cookie name
@@ -97,8 +115,11 @@ MongoClient.connect(db, (err, db) => {
             // Remember to start an HTTPS server to get this working
             // secure: true
         }
-        */
-
+            */
+           cookie: {
+               httpOnly: true,
+               secure: true
+           }
     }));
 
     /*
@@ -132,7 +153,7 @@ MongoClient.connect(db, (err, db) => {
     // Template system setup
     swig.setDefaults({
         // Autoescape disabled
-        autoescape: false
+        autoescape: true
         /*
         // Fix for A3 - XSS, enable auto escaping
         autoescape: true // default value
@@ -140,7 +161,7 @@ MongoClient.connect(db, (err, db) => {
     });
 
     // Insecure HTTP connection
-    http.createServer(app).listen(port, () => {
+    https.createServer(httpsOptions, app).listen(port, () => {
         console.log(`Express http server listening on port ${port}`);
     });
 
